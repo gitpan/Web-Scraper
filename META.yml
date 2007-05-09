@@ -10,4 +10,10 @@ no_index:
   directory: 
     - inc
     - t
-version: 0.01
+requires: 
+  HTML::Selector::XPath: 0
+  HTML::TreeBuilder::XPath: 0
+  HTTP::Response::Encoding: 0
+  LWP::UserAgent: 0
+  Scalar::Util: 0
+version: 0.02
