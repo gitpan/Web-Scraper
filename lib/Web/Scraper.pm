@@ -6,7 +6,7 @@ use Scalar::Util 'blessed';
 use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub import {
     my $class = shift;
@@ -14,8 +14,9 @@ sub import {
 
     no strict 'refs';
     *{"$pkg\::scraper"} = \&scraper;
-    *{"$pkg\::process"} = sub { goto &process };
-    *{"$pkg\::result"}  = sub { goto &result  };
+    *{"$pkg\::process"}       = sub { goto &process };
+    *{"$pkg\::process_first"} = sub { goto &process_first };
+    *{"$pkg\::result"}        = sub { goto &result  };
 }
 
 my $ua;
@@ -31,54 +32,35 @@ sub scraper(&) {
 
     sub {
         my $stuff = shift;
+        my($html, $tree);
 
         if (blessed($stuff) && $stuff->isa('URI')) {
             require HTTP::Response::Encoding;
             my $ua  = __ua;
             my $res = $ua->get($stuff);
             if ($res->is_success) {
-                $stuff = $res->decoded_content;
+                $html = $res->decoded_content;
             } else {
                 croak "GET $stuff failed: ", $res->status_line;
             }
+        } elsif (blessed($stuff) && $stuff->isa('HTML::Element')) {
+            $tree = $stuff->clone;
+        } elsif (ref($stuff) && ref($stuff) eq 'SCALAR') {
+            $html = $$stuff;
+        } else {
+            $html = $stuff;
         }
 
-        my $tree = HTML::TreeBuilder::XPath->new;
-        $tree->parse($stuff);
-
-        my $stash;
-
-        my $get_value = sub {
-            my($node, $val) = @_;
-
-            if (ref($val) && ref($val) eq 'CODE') {
-                return $val->($node->as_HTML);
-            } elsif ($val =~ s!^@!!) {
-                return $node->attr($val);
-            } elsif ($val eq 'content') {
-                return $node->as_text;
-            } else {
-                Carp::cluck "WTF";
-            }
+        $tree ||= do {
+            my $t = HTML::TreeBuilder::XPath->new;
+            $t->parse($html);
+            $t;
         };
 
+        my $stash = {};
         no warnings 'redefine';
-        local *process = sub {
-            my($exp, @attr) = @_;
-
-            my $xpath = HTML::Selector::XPath::selector_to_xpath($exp);
-            my @nodes = $tree->findnodes($xpath) or return;
-
-            while (my($key, $val) = splice(@attr, 0, 2)) {
-                if ($key =~ s!\[\]$!!) {
-                    $stash->{$key} = [ map $get_value->($_, $val), @nodes ];
-                } else {
-                    $stash->{$key} = $get_value->($nodes[0], $val);
-                }
-            }
-
-            return;
-        };
+        local *process       = create_process(0, $tree, $stash);
+        local *process_first = create_process(1, $tree, $stash);
 
         local *result = sub {
             my @keys = @_;
@@ -101,13 +83,56 @@ sub scraper(&) {
     };
 }
 
-sub process {
-    croak "Can't call process() outside scraper block";
+sub create_process {
+    my($first, $tree, $stash) = @_;
+
+    sub {
+        my($exp, @attr) = @_;
+
+        my $xpath = HTML::Selector::XPath::selector_to_xpath($exp);
+        my @nodes = $tree->findnodes($xpath) or return;
+        @nodes = ($nodes[0]) if $first;
+
+        while (my($key, $val) = splice(@attr, 0, 2)) {
+            if (ref($key) && ref($key) eq 'CODE' && !defined $val) {
+                for my $node (@nodes) {
+                    $key->($node);
+                }
+            } elsif ($key =~ s!\[\]$!!) {
+                $stash->{$key} = [ map get_value($_, $val), @nodes ];
+            } else {
+                $stash->{$key} = get_value($nodes[0], $val);
+            }
+        }
+
+        return;
+    };
 }
 
-sub result {
-    croak "Can't call result() outside scraper block";
+sub get_value {
+    my($node, $val) = @_;
+
+    if (ref($val) && ref($val) eq 'CODE') {
+        return $val->($node);
+    } elsif ($val =~ s!^@!!) {
+        return $node->attr($val);
+    } elsif (lc($val) eq 'content' || lc($val) eq 'text') {
+        return $node->as_text;
+    } else {
+        Carp::cluck "WTF";
+    }
 }
+
+sub stub {
+    my $func = shift;
+    return sub {
+        croak "Can't call $func() outside scraper block";
+    };
+}
+
+*process       = stub 'process';
+*process_first = stub 'process_first';
+*result        = stub 'result';
 
 1;
 __END__
@@ -125,9 +150,9 @@ Web::Scraper - Web Scraping Toolkit inspired by Scrapi
 
   my $ebay_auction = scraper {
       process "h3.ens>a",
-          description => 'content',
+          description => 'TEXT',
           url => '@href';
-      process "td.ebcPr>span", price => "content";
+      process "td.ebcPr>span", price => "TEXT";
       process "div.ebPicture >a>img", image => '@src';
 
       result 'description', 'url', 'price', 'image';

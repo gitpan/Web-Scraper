@@ -16,4 +16,4 @@ requires:
   HTTP::Response::Encoding: 0
   LWP::UserAgent: 0
   Scalar::Util: 0
-version: 0.02
+version: 0.03
