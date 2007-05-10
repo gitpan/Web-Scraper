@@ -6,7 +6,7 @@ use Scalar::Util 'blessed';
 use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub import {
     my $class = shift;
@@ -27,6 +27,11 @@ sub __ua {
     $ua;
 }
 
+sub define {
+    my($class, $coderef) = @_;
+    bless { code => $coderef }, $class;
+}
+
 sub scraper(&) {
     my($coderef) = @_;
     bless { code => $coderef }, __PACKAGE__;
@@ -39,11 +44,12 @@ sub scrape {
     my($html, $tree);
 
     if (blessed($stuff) && $stuff->isa('URI')) {
+        require Encode;
         require HTTP::Response::Encoding;
         my $ua  = __ua;
         my $res = $ua->get($stuff);
         if ($res->is_success) {
-            $html = $res->decoded_content;
+            $html = $res->encoding ? $res->decoded_content : Encode::decode("latin-1", $res->content);
         } else {
             croak "GET $stuff failed: ", $res->status_line;
         }
@@ -92,13 +98,14 @@ sub create_process {
     sub {
         my($exp, @attr) = @_;
 
-        my $xpath = HTML::Selector::XPath::selector_to_xpath($exp);
+        my $xpath = $exp =~ m!^/! ? $exp : HTML::Selector::XPath::selector_to_xpath($exp);
         my @nodes = $tree->findnodes($xpath) or return;
         @nodes = ($nodes[0]) if $first;
 
         while (my($key, $val) = splice(@attr, 0, 2)) {
             if (ref($key) && ref($key) eq 'CODE' && !defined $val) {
                 for my $node (@nodes) {
+                    local $_ = $node;
                     $key->($node);
                 }
             } elsif ($key =~ s!\[\]$!!) {
@@ -116,6 +123,7 @@ sub __get_value {
     my($node, $val) = @_;
 
     if (ref($val) && ref($val) eq 'CODE') {
+        local $_ = $node;
         return $val->($node);
     } elsif (blessed($val) && $val->isa('Web::Scraper')) {
         return $val->scrape($node);
