@@ -6,7 +6,7 @@ use Scalar::Util 'blessed';
 use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 
-our $VERSION = '0.05';
+our $VERSION = '0.07';
 
 sub import {
     my $class = shift;
@@ -49,7 +49,8 @@ sub scrape {
         my $ua  = __ua;
         my $res = $ua->get($stuff);
         if ($res->is_success) {
-            $html = $res->encoding ? $res->decoded_content : Encode::decode("latin-1", $res->content);
+            my $encoding = $res->encoding || "latin-1";
+            $html = Encode::decode($encoding, $res->content);
         } else {
             croak "GET $stuff failed: ", $res->status_line;
         }
