@@ -6,7 +6,7 @@ use Web::Scraper;
 use Test::More;
 
 plan skip_all => "LIVE_TEST not enabled"
-    unless $ENV{LIVE_TEST};
+    unless $ENV{LIVE_TEST} || $ENV{TEST_ALL};
 
 plan tests => 1;
 require YAML;
@@ -24,5 +24,5 @@ is_deeply $res, YAML::Load(<<EOF);
 category: アイドル
 furigana: こんのあさみ
 title: 紺野あさ美
-url: /keyword/%ba%b0%cc%ee%a4%a2%a4%b5%c8%fe?kid=800
+url: /keyword/%ba%b0%cc%ee%a4%a2%a4%b5%c8%fe
 EOF

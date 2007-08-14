@@ -6,7 +6,7 @@ use Scalar::Util 'blessed';
 use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 sub import {
     my $class = shift;
@@ -86,6 +86,7 @@ sub scrape {
     };
 
     my $ret = $self->{code}->($tree);
+    $tree->delete;
 
     # check user specified return value
     return $ret if $ret;
