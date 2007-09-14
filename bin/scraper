@@ -16,7 +16,7 @@ my(@stack, $source);
 my $stuff   = process_args($ARGV[0])
     or die "Usage: scraper [URI-or-filename]\n";
 
-my $term    = Term::ReadLine->new();
+my $term    = Term::ReadLine->new("Web::Scraper");
 my $scraper = scraper { run_loop($_[0], $term) };
 my $result  = $scraper->scrape($stuff);
 
@@ -47,7 +47,7 @@ sub run_loop {
         } elsif ($in eq 'y') {
             warn Dump result;
         } elsif ($in eq 's') {
-            warn $tree->as_HTML(undef, "  ");
+            warn $tree->as_HTML(undef, "  ", {});
         } elsif ($in eq 'q') {
             return;
         } elsif ($in eq 'c') {
