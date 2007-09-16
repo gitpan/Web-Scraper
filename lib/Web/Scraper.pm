@@ -7,7 +7,7 @@ use HTML::Tagset;
 use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 sub import {
     my $class = shift;
@@ -20,12 +20,18 @@ sub import {
     *{"$pkg\::result"}        = sub { goto &result  };
 }
 
-my $ua;
+our $UserAgent;
 
 sub __ua {
     require LWP::UserAgent;
-    $ua ||= LWP::UserAgent->new(agent => __PACKAGE__ . "/" . $VERSION);
-    $ua;
+    $UserAgent ||= LWP::UserAgent->new(agent => __PACKAGE__ . "/" . $VERSION);
+    $UserAgent;
+}
+
+sub user_agent {
+    my $self = shift;
+    $self->{user_agent} = shift if @_;
+    $self->{user_agent} || __ua;
 }
 
 sub define {
@@ -47,7 +53,7 @@ sub scrape {
     if (blessed($stuff) && $stuff->isa('URI')) {
         require Encode;
         require HTTP::Response::Encoding;
-        my $ua  = __ua;
+        my $ua  = $self->user_agent;
         my $res = $ua->get($stuff);
         if ($res->is_success) {
             my $encoding = $res->encoding || "latin-1";
@@ -211,8 +217,6 @@ Web::Scraper - Web Scraping Toolkit inspired by Scrapi
           url => '@href';
       process "td.ebcPr>span", price => "TEXT";
       process "div.ebPicture >a>img", image => '@src';
-
-      result 'description', 'url', 'price', 'image';
   };
 
   my $ebay = scraper {
@@ -221,7 +225,7 @@ Web::Scraper - Web Scraping Toolkit inspired by Scrapi
       result 'auctions';
   };
 
-  $ebay->scrape( URI->new("http://search.ebay.com/apple-ipod-nano_W0QQssPageNameZWLRS") );
+  my $res = $ebay->scrape( URI->new("http://search.ebay.com/apple-ipod-nano_W0QQssPageNameZWLRS") );
 
 =head1 DESCRIPTION
 
