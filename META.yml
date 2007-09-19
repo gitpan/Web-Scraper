@@ -11,13 +11,15 @@ no_index:
     - inc
     - t
 requires: 
+  HTML::Entities: 0
   HTML::Selector::XPath: 0
   HTML::Tagset: 0
   HTML::TreeBuilder::XPath: 0.08
   HTTP::Response::Encoding: 0
   LWP::UserAgent: 0
   Scalar::Util: 0
+  Term::Encoding: 0
   URI: 0
   XML::XPathEngine: 0.08
   YAML: 0
-version: 0.15
+version: 0.16
