@@ -21,4 +21,4 @@ requires:
   URI: 0
   XML::XPathEngine: 0.08
   YAML: 0
-version: 0.18
+version: 0.19
