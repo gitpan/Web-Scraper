@@ -8,7 +8,7 @@ use HTML::Tagset;
 use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 sub import {
     my $class = shift;
@@ -152,7 +152,7 @@ sub __get_value {
         local $_ = $node;
         return $val->($node);
     } elsif (blessed($val) && $val->isa('Web::Scraper')) {
-        return $val->scrape($node);
+        return $val->scrape($node, $uri);
     } elsif ($val =~ s!^@!!) {
         my $value =  $node->attr($val);
         if ($uri && is_link_element($node, $val)) {
@@ -167,7 +167,7 @@ sub __get_value {
             # xxx is this a bug? as_XML doesn't return encoded output
             return HTML::Entities::encode($node->as_XML, q("'<>&));
         }
-        my $html = $node->as_HTML(q("'<>&), undef, {});
+        my $html = $node->as_XML;
         $html =~ s!^<.*?>!!;
         $html =~ s!\s*</\w+>\n*$!!;
         return $html;
