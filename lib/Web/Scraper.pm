@@ -8,8 +8,9 @@ use HTML::Entities;
 use HTML::Tagset;
 use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
+use UNIVERSAL::require;
 
-our $VERSION = '0.21';
+our $VERSION = '0.21_01';
 
 sub import {
     my $class = shift;
@@ -89,7 +90,9 @@ sub scrape {
     local *process       = create_process(0, $tree, $stash, $current);
     local *process_first = create_process(1, $tree, $stash, $current);
 
+    my $retval;
     local *result = sub {
+        $retval++;
         my @keys = @_;
 
         if (@keys == 1) {
@@ -107,7 +110,7 @@ sub scrape {
     $tree->delete;
 
     # check user specified return value
-    return $ret if $ret;
+    return $ret if $retval;
 
     return $stash;
 }
@@ -184,9 +187,54 @@ sub __get_value {
             $values->{$key} = __get_value($node, $val->{$key}, $uri);
         }
         return $values;
+    } elsif (ref($val) eq 'ARRAY') {
+        my $how   = $val->[0];
+        my $value = __get_value($node, $how, $uri);
+        for my $filter (@$val[1..$#$val]) {
+            $value = run_filter($value, $filter);
+        }
+        return $value;
     } else {
         Carp::croak "Unknown value type $val";
     }
+}
+
+sub run_filter {
+    my($value, $filter) = @_;
+
+    ## sub { s/foo/bar/g } is a valid filter
+    ## sub { DateTime::Format::Foo->parse_string(shift) } is valid too
+    my $callback;
+    my $module;
+
+    if (ref($filter) eq 'CODE') {
+        $callback = $filter;
+        $module   = "$filter";
+    } elsif (!ref($filter)) {
+        $module = $filter =~ s/^\+// ? $filter : "Web::Scraper::Filter::$filter";
+        unless ($module->isa('Web::Scraper::Filter')) {
+            $module->require or Carp::croak("Loading $module: $@");
+        }
+
+        $callback = sub { $module->new->filter(shift) };
+    } else {
+        Carp::croak("Don't know filter type $filter");
+    }
+
+    local $_ = $value;
+    my $retval = eval { $callback->($value) };
+    if ($@) {
+        Carp::croak("Filter $module had an error: $@");
+    }
+
+    no warnings 'uninitialized';
+    if (($retval =~ /^\d+$/ and $_ ne $value) or (defined $retval and !$retval)) {
+        $value = $_;
+    } else {
+        $value = $retval;
+    }
+
+    return $value;
 }
 
 sub is_link_element {

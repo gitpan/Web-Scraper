@@ -19,7 +19,8 @@ requires:
   HTTP::Response::Encoding: 0
   LWP::UserAgent: 0
   Scalar::Util: 0
+  UNIVERSAL::require: 0
   URI: 0
   XML::XPathEngine: 0.08
   YAML: 0
-version: 0.21
+version: 0.21_01
