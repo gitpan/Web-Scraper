@@ -12,7 +12,7 @@ no_index:
     - t
 requires: 
   HTML::Entities: 0
-  HTML::Selector::XPath: 0
+  HTML::Selector::XPath: 0.03
   HTML::Tagset: 0
   HTML::TreeBuilder: 3.23
   HTML::TreeBuilder::XPath: 0.08
@@ -23,4 +23,4 @@ requires:
   URI: 0
   XML::XPathEngine: 0.08
   YAML: 0
-version: 0.22
+version: 0.23
