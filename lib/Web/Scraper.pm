@@ -1,7 +1,7 @@
 package Web::Scraper;
 use strict;
 use warnings;
-use 5.8.1;
+use 5.008001;
 use Carp;
 use Scalar::Util qw(blessed);
 use List::Util qw(first);
@@ -11,7 +11,7 @@ use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 use UNIVERSAL::require;
 
-our $VERSION = '0.26';
+our $VERSION = '0.27';
 
 sub import {
     my $class = shift;
@@ -43,7 +43,7 @@ sub define {
     bless { code => $coderef }, $class;
 }
 
-sub scraper(&) {
+sub scraper(&) { ## no critic
     my($coderef) = @_;
     bless { code => $coderef }, __PACKAGE__;
 }
@@ -278,6 +278,7 @@ Web::Scraper - Web Scraping Toolkit inspired by Scrapi
 
   use URI;
   use Web::Scraper;
+  use HTML::TreeBuilder::LibXML; # optional, for speedup
 
   my $ebay_auction = scraper {
       process "h3.ens>a",
