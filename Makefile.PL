@@ -19,7 +19,7 @@ build_requires 'Test::More';
 install_script 'bin/scraper';
 
 unlink glob "t/libxml-*.t";
-if (eval { require HTML::TreeBuilder::LibXML }) {
+if (eval q{ use HTML::TreeBuilder::LibXML 0.04 }) {
     setup_libxml_tests();
 }
 
@@ -29,6 +29,7 @@ author_tests "xt";
 WriteAll;
 
 sub setup_libxml_tests {
+    warn "You have HTML::TreeBuilder::LibXML. Writing tests for it.\n";
     my @tests = glob "t/*.t";
     for my $test (@tests) {
         (my $new = $test) =~ s!^t/!t/libxml-!;
@@ -38,7 +39,7 @@ sub setup_libxml_tests {
         while (<$in>) {
             print $out $_;
             if (/^use Web::Scraper/) {
-                print $out "use HTML::TreeBuilder::LibXML;\n";
+                print $out "use HTML::TreeBuilder::LibXML;\nHTML::TreeBuilder::LibXML->replace_original;\n";
             }
         }
     }
