@@ -11,13 +11,14 @@ use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 use UNIVERSAL::require;
 
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 
 sub import {
     my $class = shift;
     my $pkg   = caller;
 
     no strict 'refs';
+    no warnings 'redefine';
     *{"$pkg\::scraper"}       = _build_scraper($class);
     *{"$pkg\::process"}       = sub { goto &process };
     *{"$pkg\::process_first"} = sub { goto &process_first };
