@@ -26,8 +26,7 @@ requires:
   HTML::Tagset: 0
   HTML::TreeBuilder: 3.23
   HTML::TreeBuilder::XPath: 0.08
-  HTTP::Response::Encoding: 0
-  LWP::UserAgent: 0
+  LWP: 5.827
   Scalar::Util: 0
   UNIVERSAL::require: 0
   URI: 0
@@ -37,4 +36,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/miyagawa/web-scraper.git
-version: 0.30
+version: 0.31

@@ -7,13 +7,16 @@ requires 'HTML::TreeBuilder::XPath', 0.08;
 requires 'HTML::TreeBuilder', 3.23;
 requires 'XML::XPathEngine', 0.08;
 requires 'HTML::Selector::XPath', 0.03;
-requires 'LWP::UserAgent';
-requires 'HTTP::Response::Encoding';
+requires 'LWP', 5.827;
 requires 'HTML::Entities';
 requires 'HTML::Tagset';
 requires 'UNIVERSAL::require';
 requires 'URI';
 requires 'YAML';
+
+include 'Module::AutoInstall';
+feature 'LibXML', -default => 1, 'HTML::TreeBuilder::LibXML', 0.04;
+auto_install;
 
 build_requires 'Test::More';
 install_script 'bin/scraper';
@@ -34,7 +37,7 @@ sub setup_libxml_tests {
     my %skip_tests = map { ("t/$_" => 1) } qw( 12_html.t );
     my @tests = grep !$skip_tests{$_}, glob "t/*.t";
     for my $test (@tests) {
-        (my $new = $test) =~ s!^t/!t/libxml-!;
+        (my $new = $test) =~ s!^t/(\d+)!t/libxml-$1! or next;
         open my $in, "<", $test;
         open my $out, ">", $new;
 

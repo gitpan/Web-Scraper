@@ -11,7 +11,7 @@ use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 use UNIVERSAL::require;
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 sub import {
     my $class = shift;
@@ -64,10 +64,9 @@ sub scrape {
         return $self->scrape($res, $stuff->as_string);
     } elsif (blessed($stuff) && $stuff->isa('HTTP::Response')) {
         require Encode;
-        require HTTP::Response::Encoding;
         if ($stuff->is_success) {
             my @encoding = (
-                $stuff->encoding,
+                $stuff->content_charset,
                 # could be multiple because HTTP response and META might be different
                 ($stuff->header('Content-Type') =~ /charset=([\w\-]+)/g),
                 "latin-1",
