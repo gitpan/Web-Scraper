@@ -1,5 +1,5 @@
 ---
-abstract: 'Web Scraping Toolkit inspired by Scrapi'
+abstract: 'Web Scraping Toolkit using HTML and CSS Selectors or XPath expressions'
 author:
   - 'Tatsuhiko Miyagawa <miyagawa@bulknews.net>'
 build_requires:
@@ -8,7 +8,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.91'
+generated_by: 'Module::Install version 0.92'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -36,4 +36,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/miyagawa/web-scraper.git
-version: 0.31
+version: 0.32

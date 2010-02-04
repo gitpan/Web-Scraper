@@ -11,7 +11,7 @@ use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 use UNIVERSAL::require;
 
-our $VERSION = '0.31';
+our $VERSION = '0.32';
 
 sub import {
     my $class = shift;
@@ -63,16 +63,8 @@ sub scrape {
         my $res = $ua->get($stuff);
         return $self->scrape($res, $stuff->as_string);
     } elsif (blessed($stuff) && $stuff->isa('HTTP::Response')) {
-        require Encode;
         if ($stuff->is_success) {
-            my @encoding = (
-                $stuff->content_charset,
-                # could be multiple because HTTP response and META might be different
-                ($stuff->header('Content-Type') =~ /charset=([\w\-]+)/g),
-                "latin-1",
-            );
-            my $encoding = first { defined $_ && Encode::find_encoding($_) } @encoding;
-            $html = Encode::decode($encoding, $stuff->content);
+            $html = $stuff->decoded_content;
         } else {
             croak "GET " . $stuff->request->uri . " failed: ", $stuff->status_line;
         }
@@ -280,15 +272,20 @@ __END__
 
 =head1 NAME
 
-Web::Scraper - Web Scraping Toolkit inspired by Scrapi
+Web::Scraper - Web Scraping Toolkit using HTML and CSS Selectors or XPath expressions
 
 =head1 SYNOPSIS
 
   use URI;
   use Web::Scraper;
 
+  # First, create your scraper block
   my $tweets = scraper {
+      # Parse all LIs with the class "status", store them into a resulting
+      # array 'tweets'.  We embed another scraper for each tweet.
       process "li.status", "tweets[]" => scraper {
+          # And, in that array, pull in the elementy with the class
+          # "entry-content", "entry-date" and the link
           process ".entry-content", body => 'TEXT';
           process ".entry-date", when => 'TEXT';
           process 'a[rel="bookmark"]', link => '@href';
@@ -297,27 +294,38 @@ Web::Scraper - Web Scraping Toolkit inspired by Scrapi
 
   my $res = $tweets->scrape( URI->new("http://twitter.com/miyagawa") );
 
+  # The result has the populated tweets array
   for my $tweet (@{$res->{tweets}}) {
       print "$tweet->{body} $tweet->{when} (link: $tweet->{link})\n";
+  }
+
+The structure would resemble this (visually)
+  {
+    tweets => [
+      { body => $body, when => $date, link => $uri },
+      { body => $body, when => $date, link => $uri },
+    ]
   }
 
 =head1 DESCRIPTION
 
 Web::Scraper is a web scraper toolkit, inspired by Ruby's equivalent
-Scrapi. It allows you to write a web scraping script or class in a
-DSL-ish but still pure-perl language.
+Scrapi. It provides a DSL-ish interface for traversing HTML documents and
+returning a neatly arranged Perl data strcuture.
+
+The I<scraper> and I<process> blocks provide a method to define what segments
+of a document to extract.  It understands HTML and CSS Selectors as well as
+XPath expressions.
 
 =head1 METHODS
 
-=over 4
-
-=item scraper
+=head2 scraper
 
   $scraper = scraper { ... };
 
 Creates a new Web::Scraper object by wrapping the DSL code that will be fired when I<scrape> method is called.
 
-=item scrape
+=head2 scrape
 
   $res = $scraper->scrape(URI->new($uri));
   $res = $scraper->scrape($html_content);
@@ -341,7 +349,7 @@ a string instead of URI or HTTP::Response.
 
 This way Web::Scraper can resolve the relative links found in the document.
 
-=item process
+=head2 process
 
   scraper {
       process "tag.class", key => 'TEXT';
@@ -375,7 +383,11 @@ XPath expression and otherwise CSS selector.
   # list => [ { id => "1", text => "foo" }, { id => "2", text => "bar" } ];
   process "li", "list[]" => { id => '@id', text => "TEXT" };
 
-=back
+=head1 EXAMPLES
+
+There are many examples in the C<eg/> dir packaged in this distribution.
+It is recommended to look through these.
+
 
 =head1 NESTED SCRAPERS
 
@@ -397,5 +409,7 @@ it under the same terms as Perl itself.
 =head1 SEE ALSO
 
 L<http://blog.labnotes.org/category/scrapi/>
+
+L<HTML::TreeBuilder::XPath>
 
 =cut
