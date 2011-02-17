@@ -4,11 +4,12 @@ author:
   - 'Tatsuhiko Miyagawa <miyagawa@bulknews.net>'
 build_requires:
   ExtUtils::MakeMaker: 6.42
+  Test::Base: 0
   Test::More: 0
 configure_requires:
   ExtUtils::MakeMaker: 6.42
 distribution_type: module
-generated_by: 'Module::Install version 0.92'
+generated_by: 'Module::Install version 1.00'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -20,7 +21,6 @@ no_index:
     - t
     - xt
 requires:
-  Filter::Util::Call: 0
   HTML::Entities: 0
   HTML::Selector::XPath: 0.03
   HTML::Tagset: 0
@@ -36,4 +36,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/miyagawa/web-scraper.git
-version: 0.32
+version: 0.33
