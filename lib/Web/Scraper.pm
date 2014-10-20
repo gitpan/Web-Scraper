@@ -11,7 +11,7 @@ use HTML::TreeBuilder::XPath;
 use HTML::Selector::XPath;
 use UNIVERSAL::require;
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 
 sub import {
     my $class = shift;
@@ -227,6 +227,18 @@ sub run_filter {
     if (ref($filter) eq 'CODE') {
         $callback = $filter;
         $module   = "$filter";
+    } elsif (ref($filter) eq 'Regexp') {
+        $callback = sub {
+            my @unnamed = shift =~ /$filter/x;
+            if (%+) {
+                return { %+ };
+            } elsif (@unnamed) {
+                return shift @unnamed;
+            } else {
+                return;
+            }
+        };
+        $module   = "$filter";
     } elsif (!ref($filter)) {
         $module = $filter =~ s/^\+// ? $filter : "Web::Scraper::Filter::$filter";
         unless ($module->isa('Web::Scraper::Filter')) {
@@ -289,32 +301,38 @@ Web::Scraper - Web Scraping Toolkit using HTML and CSS Selectors or XPath expres
 
   use URI;
   use Web::Scraper;
+  use Encode;
 
   # First, create your scraper block
-  my $tweets = scraper {
-      # Parse all LIs with the class "status", store them into a resulting
-      # array 'tweets'.  We embed another scraper for each tweet.
-      process "li.status", "tweets[]" => scraper {
-          # And, in that array, pull in the elementy with the class
-          # "entry-content", "entry-date" and the link
-          process ".entry-content", body => 'TEXT';
-          process ".entry-date", when => 'TEXT';
-          process 'a[rel="bookmark"]', link => '@href';
+  my $authors = scraper {
+      # Parse all TDs inside 'table[width="100%]"', store them into
+      # an array 'authors'.  We embed other scrapers for each TD.
+      process 'table[width="100%"] td', "authors[]" => scraper {
+  	# And, in each TD,
+  	# get the URI of "a" element
+  	process "a", uri => '@href';
+  	# get text inside "small" element
+  	process "small", fullname => 'TEXT';
       };
   };
 
-  my $res = $tweets->scrape( URI->new("http://twitter.com/miyagawa") );
+  my $res = $authors->scrape( URI->new("http://search.cpan.org/author/?A") );
 
-  # The result has the populated tweets array
-  for my $tweet (@{$res->{tweets}}) {
-      print "$tweet->{body} $tweet->{when} (link: $tweet->{link})\n";
+  # iterate the array 'authors'
+  for my $author (@{$res->{authors}}) {
+      # output is like:
+      # Andy Adler	http://search.cpan.org/~aadler/
+      # Aaron K Dancygier	http://search.cpan.org/~aakd/
+      # Aamer Akhter	http://search.cpan.org/~aakhter/
+      print Encode::encode("utf8", "$author->{fullname}\t$author->{uri}\n");
   }
+
 
 The structure would resemble this (visually)
   {
-    tweets => [
-      { body => $body, when => $date, link => $uri },
-      { body => $body, when => $date, link => $uri },
+    authors => [
+      { fullname => $fullname, link => $uri },
+      { fullname => $fullname, link => $uri },
     ]
   }
 
@@ -322,7 +340,7 @@ The structure would resemble this (visually)
 
 Web::Scraper is a web scraper toolkit, inspired by Ruby's equivalent
 Scrapi. It provides a DSL-ish interface for traversing HTML documents and
-returning a neatly arranged Perl data strcuture.
+returning a neatly arranged Perl data structure.
 
 The I<scraper> and I<process> blocks provide a method to define what segments
 of a document to extract.  It understands HTML and CSS Selectors as well as
@@ -403,19 +421,67 @@ XPath expression and otherwise CSS selector.
   # list => [ { id => "1", text => "foo" }, { id => "2", text => "bar" } ];
   process "li", "list[]" => { id => '@id', text => "TEXT" };
 
+=head2 process_first
+
+C<process_first> is the same as C<process> but stops when the first matching
+result is found.
+
+  # <span class="date">2008/12/21</span>
+  # <span class="date">2008/12/22</span>
+  # date => "2008/12/21"
+  process_first ".date", date => 'TEXT';
+
+=head2 result
+
+C<result> allows to return not the default value after processing but a single
+value specified by a key or a hash reference built from several keys.
+
+  process 'a', 'want[]' => 'TEXT';
+  result 'want';
+
 =head1 EXAMPLES
 
 There are many examples in the C<eg/> dir packaged in this distribution.
 It is recommended to look through these.
 
-
 =head1 NESTED SCRAPERS
 
-TBD
+Scrapers can be nested thus allowing to scrape already captured data.
+
+  # <ul>
+  # <li class="foo"><a href="foo1">bar1</a></li>
+  # <li class="bar"><a href="foo2">bar2</a></li>
+  # <li class="foo"><a href="foo3">bar3</a></li>
+  # </ul>
+  # friends => [ {href => 'foo1'}, {href => 'foo2'} ];
+  process 'li', 'friends[]' => scraper {
+    process 'a', href => '@href',
+  };
 
 =head1 FILTERS
 
-TBD
+Filters are applied to the result after processing. They can be declared as
+anonymous subroutines or as class names.
+
+  process $exp, $key => [ 'TEXT', sub { s/foo/bar/ } ];
+  process $exp, $key => [ 'TEXT', 'Something' ];
+  process $exp, $key => [ 'TEXT', '+MyApp::Filter::Foo' ];
+
+Filters can be stacked
+
+  process $exp, $key => [ '@href', 'Foo', '+MyApp::Filter::Bar', \&baz ];
+
+More about filters you can find in L<Web::Scraper::Filter> documentation.
+
+=head1 XML backends
+
+By default L<HTML::TreeBuilder::XPath> is used, this can be replaces by
+a L<XML::LibXML> backend using L<Web::Scraper::LibXML> module.
+
+  use Web::Scraper::LibXML;
+
+  # same as Web::Scraper
+  my $scraper = scraper { ... };
 
 =head1 AUTHOR
 
